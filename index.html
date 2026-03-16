@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -103,10 +103,11 @@
         </div>
         
         <div id="startOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-40 hidden backdrop-blur-md">
-            <button id="startBtn" class="group relative px-10 md:px-14 py-5 md:py-6 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-black rounded-2xl text-xl md:text-2xl shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-all transform hover:scale-105 active:scale-95 border border-cyan-400/50 uppercase tracking-widest">
+            <button id="startBtn" disabled class="group relative px-10 md:px-14 py-5 md:py-6 bg-gradient-to-r from-slate-800 to-slate-900 text-slate-400 font-black rounded-2xl text-xl md:text-2xl shadow-lg transition-all border border-slate-700 uppercase tracking-widest cursor-not-allowed">
                 <span class="relative z-10 flex items-center gap-3">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Engage Thrusters
+                    <div id="startSpinner" class="w-6 h-6 border-4 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
+                    <svg id="startIcon" class="w-8 h-8 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span id="startText">BOOTING AI CORE...</span>
                 </span>
             </button>
         </div>
@@ -161,6 +162,9 @@
         let targetBirdY = gameCanvas.height / 2; 
         let isFirstTrackingFrame = true;
 
+        let countdownValue = 3;
+        let countdownTimer = 0;
+
         // Post Processing / Effects
         let shakeIntensity = 0;
 
@@ -188,8 +192,8 @@
         // Industrial Pillars
         let pipes = [];
         const pipeWidth = 100;
-        let pipeGap = 240;
-        const pipeSpeedBase = 7;
+        let pipeGap = 280; // Started wider for normal difficulty
+        let pipeSpeedBase = 4.0; // Reduced to start slower
         let pipeSpeed = pipeSpeedBase;
         let frames = 0;
 
@@ -242,16 +246,21 @@
                 osc.type = 'square'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(100, t + 0.4);
                 gain.gain.setValueAtTime(0.2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
                 osc.start(t); osc.stop(t + 0.4);
+            } else if (type === 'beep') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, t);
+                gain.gain.setValueAtTime(0.2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                osc.start(t); osc.stop(t + 0.2);
+            } else if (type === 'go') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, t);
+                gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+                osc.start(t); osc.stop(t + 0.4);
             }
         }
 
         function triggerFirecrackers() {
-            const end = Date.now() + 1500;
-            (function frame() {
-                confetti({ particleCount: 6, angle: 60, spread: 60, origin: { x: 0 }, colors: ['#22d3ee', '#3b82f6', '#818cf8'] });
-                confetti({ particleCount: 6, angle: 120, spread: 60, origin: { x: 1 }, colors: ['#22d3ee', '#3b82f6', '#818cf8'] });
-                if (Date.now() < end) requestAnimationFrame(frame);
-            }());
+            // Firing a single, clean burst prevents the game from hanging or lagging
+            confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.6 }, colors: ['#22d3ee', '#3b82f6', '#818cf8'], zIndex: 100 });
+            confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.6 }, colors: ['#22d3ee', '#3b82f6', '#818cf8'], zIndex: 100 });
         }
 
         // --- Setup Scenery (Procedural Generation) ---
@@ -341,15 +350,41 @@
 
         loadingOverlay.classList.add('hidden'); startOverlay.classList.remove('hidden');
 
+        // --- PRELOAD AI MODEL: Eliminates the long loading delay! ---
+        faceMesh.initialize().then(() => {
+            const btn = document.getElementById('startBtn');
+            const spinner = document.getElementById('startSpinner');
+            const icon = document.getElementById('startIcon');
+            const text = document.getElementById('startText');
+            
+            btn.disabled = false;
+            btn.className = "group relative px-10 md:px-14 py-5 md:py-6 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-black rounded-2xl text-xl md:text-2xl shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-all transform hover:scale-105 active:scale-95 border border-cyan-400/50 uppercase tracking-widest cursor-pointer";
+            
+            spinner.classList.add('hidden');
+            icon.classList.remove('hidden');
+            text.innerText = "Engage Thrusters";
+        });
+
+        function beginCountdown() {
+            gameState = 'COUNTDOWN';
+            countdownValue = 3;
+            countdownTimer = 60; // 60 frames = approx 1 second
+            playSound('beep');
+        }
+
         startBtn.addEventListener('click', () => {
             initAudio(); startOverlay.classList.add('hidden'); loadingOverlay.classList.remove('hidden');
             loadingOverlay.querySelector('h2').innerText = "Connecting Optics...";
+            loadingOverlay.querySelector('p').innerText = "Please allow camera access in your browser.";
             camera.start().then(() => {
-                loadingOverlay.classList.add('hidden'); resetGame(); gameState = 'PLAYING'; gameLoop();
-            }).catch(err => { loadingOverlay.querySelector('h2').innerText = "Sensor Error!"; });
+                loadingOverlay.classList.add('hidden'); resetGame(); beginCountdown(); gameLoop();
+            }).catch(err => { 
+                loadingOverlay.querySelector('h2').innerText = "Sensor Error!"; 
+                loadingOverlay.querySelector('p').innerText = "Camera access denied or unavailable.";
+            });
         });
 
-        restartBtn.addEventListener('click', () => { gameOverOverlay.classList.add('hidden'); resetGame(); gameState = 'PLAYING'; });
+        restartBtn.addEventListener('click', () => { gameOverOverlay.classList.add('hidden'); resetGame(); beginCountdown(); });
 
         // --- Game Engine ---
 
@@ -357,7 +392,7 @@
             bird.y = gameCanvas.height / 2; bird.lastY = bird.y; bird.vy = 0; bird.engineHeat = 0;
             targetBirdY = gameCanvas.height / 2; isFirstTrackingFrame = true; shakeIntensity = 0;
             pipes = []; particles = []; coins = []; powerups = []; popups = []; hasShield = false;
-            score = 0; frames = 0; pipeSpeed = pipeSpeedBase; pipeGap = 240; celebratedForScore = 0;
+            score = 0; frames = 0; pipeSpeed = pipeSpeedBase; pipeGap = 280; celebratedForScore = 0;
             updateScoreDisplay(); initScenery();
         }
 
@@ -381,10 +416,34 @@
         }
 
         function update() {
-            if (gameState !== 'PLAYING') return;
+            if (gameState === 'GAMEOVER' || gameState === 'IDLE') return;
 
             if (faceDetected && isFirstTrackingFrame) {
                 bird.y = targetBirdY; bird.lastY = targetBirdY; isFirstTrackingFrame = false;
+            }
+
+            if (gameState === 'COUNTDOWN') {
+                countdownTimer--;
+                if (countdownTimer <= 0) {
+                    countdownValue--;
+                    if (countdownValue > 0) {
+                        countdownTimer = 60;
+                        playSound('beep');
+                    } else if (countdownValue === 0) {
+                        countdownTimer = 60;
+                        playSound('go');
+                    } else {
+                        gameState = 'PLAYING';
+                    }
+                }
+                
+                // Allow bird to snap to face during countdown
+                if (faceDetected) {
+                    bird.y += (targetBirdY - bird.y) * 0.2;
+                    bird.lastY = bird.y;
+                    bird.vy = 0;
+                }
+                return; // Skip the rest of the game logic during countdown
             }
 
             // Advanced Drone Physics
@@ -456,8 +515,16 @@
 
                 if (p.x + pipeWidth < bird.x && !p.passed) {
                     score++; p.passed = true; playSound('score'); updateScoreDisplay();
-                    pipeSpeed = pipeSpeedBase + (score * 0.06); pipeGap = Math.max(160, 240 - (score * 1.5)); 
-                    if (score > 0 && score % 5 === 0 && celebratedForScore !== score) { triggerFirecrackers(); celebratedForScore = score; }
+                    
+                    // Progressive Difficulty: Increase speed and tighten gap gradually
+                    pipeSpeed = pipeSpeedBase + (score * 0.1); 
+                    pipeGap = Math.max(150, 280 - (score * 4)); 
+                    
+                    // Celebrate every 10 obstacles
+                    if (score > 0 && score % 10 === 0 && celebratedForScore !== score) { 
+                        triggerFirecrackers(); 
+                        celebratedForScore = score; 
+                    }
                 }
                 if (p.x + pipeWidth < -50) pipes.splice(i, 1);
             }
@@ -681,8 +748,32 @@
 
             applyCameraEffects();
 
+            // Draw Countdown Overlay
+            if (gameState === 'COUNTDOWN') {
+                gameCtx.fillStyle = 'rgba(2, 6, 23, 0.6)';
+                gameCtx.fillRect(0,0, gameCanvas.width, gameCanvas.height);
+                
+                let text = countdownValue > 0 ? countdownValue : "GO!";
+                let cColor = countdownValue > 0 ? '#38bdf8' : '#4ade80';
+                
+                gameCtx.fillStyle = cColor;
+                gameCtx.shadowColor = cColor;
+                gameCtx.shadowBlur = 30;
+                gameCtx.font = '900 140px "Segoe UI", sans-serif';
+                gameCtx.textAlign = 'center';
+                
+                let scale = 1 + (countdownTimer / 60) * 0.3; 
+                gameCtx.save();
+                gameCtx.translate(gameCanvas.width/2, gameCanvas.height/2 + 40);
+                gameCtx.scale(scale, scale);
+                gameCtx.fillText(text, 0, 0);
+                gameCtx.restore();
+                
+                gameCtx.shadowBlur = 0;
+            }
+
             // Face Warning UI
-            if (gameState === 'PLAYING' && !faceDetected) {
+            if ((gameState === 'PLAYING' || gameState === 'COUNTDOWN') && !faceDetected) {
                 gameCtx.fillStyle = 'rgba(2, 6, 23, 0.8)'; gameCtx.fillRect(0,0, gameCanvas.width, gameCanvas.height);
                 gameCtx.shadowColor = '#ef4444'; gameCtx.shadowBlur = 20; gameCtx.fillStyle = '#ef4444';
                 gameCtx.font = '900 45px "Segoe UI", sans-serif'; gameCtx.textAlign = 'center';
