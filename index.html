@@ -192,7 +192,7 @@
         // Industrial Pillars
         let pipes = [];
         const pipeWidth = 100;
-        let pipeGap = 280; // Started wider for normal difficulty
+        let pipeGap = 320; // Increased starting gap for easier normal difficulty
         let pipeSpeedBase = 4.0; // Reduced to start slower
         let pipeSpeed = pipeSpeedBase;
         let frames = 0;
@@ -392,7 +392,7 @@
             bird.y = gameCanvas.height / 2; bird.lastY = bird.y; bird.vy = 0; bird.engineHeat = 0;
             targetBirdY = gameCanvas.height / 2; isFirstTrackingFrame = true; shakeIntensity = 0;
             pipes = []; particles = []; coins = []; powerups = []; popups = []; hasShield = false;
-            score = 0; frames = 0; pipeSpeed = pipeSpeedBase; pipeGap = 280; celebratedForScore = 0;
+            score = 0; frames = 0; pipeSpeed = pipeSpeedBase; pipeGap = 320; celebratedForScore = 0;
             updateScoreDisplay(); initScenery();
         }
 
@@ -487,7 +487,8 @@
                 if(f.x < -100) { f.x = gameCanvas.width + 100; f.y = gameCanvas.height - Math.random()*150; }
             });
 
-            if (frames % Math.max(45, 90 - Math.floor(score*0.8)) === 0) spawnPipe();
+            // Increased horizontal space between pipes by making them spawn less frequently
+            if (frames % Math.max(75, 150 - Math.floor(score*0.8)) === 0) spawnPipe();
 
             for (let i = pipes.length - 1; i >= 0; i--) {
                 let p = pipes[i]; p.x -= pipeSpeed;
@@ -518,7 +519,7 @@
                     
                     // Progressive Difficulty: Increase speed and tighten gap gradually
                     pipeSpeed = pipeSpeedBase + (score * 0.1); 
-                    pipeGap = Math.max(150, 280 - (score * 4)); 
+                    pipeGap = Math.max(180, 320 - (score * 4)); 
                     
                     // Celebrate every 10 obstacles
                     if (score > 0 && score % 10 === 0 && celebratedForScore !== score) { 
