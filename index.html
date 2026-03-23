@@ -32,6 +32,12 @@
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #38bdf8; cursor: pointer; margin-top: -6px; box-shadow: 0 0 15px rgba(56,189,248,0.8); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.2); border-radius: 2px; }
 
+        /* Menu Scrolling */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .select-card { transition: all 0.2s ease; border: 2px solid transparent; }
+        .select-card.active { background-color: rgba(255,255,255,0.1); transform: scale(1.05); }
+
         @media (max-width: 768px) {
             .camera-wrapper { flex: 0 0 25%; min-height: 0; }
             .game-wrapper { flex: 1 1 75%; min-height: 0; }
@@ -53,7 +59,7 @@
                 <h1 class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-blue-400 to-indigo-400 tracking-tight">
                     AERO DYNAMICS
                 </h1>
-                <p class="text-[10px] md:text-xs text-cyan-500 font-bold uppercase tracking-widest mt-0.5 animate-pulse">Motion Interface Locked</p>
+                <p id="headerSubtitle" class="text-[10px] md:text-xs text-cyan-500 font-bold uppercase tracking-widest mt-0.5 animate-pulse">Hangar Access</p>
             </div>
         </div>
         <div class="flex items-center gap-3 md:gap-4">
@@ -90,26 +96,46 @@
                 <span class="text-[8px] md:text-[9px] font-black text-slate-200 tracking-widest uppercase">Optics</span>
             </div>
         </div>
-
-        <!-- Sensitivity Control (Floating Left) -->
-        <div class="absolute top-4 left-4 glass-panel p-3 md:p-4 rounded-2xl z-30 w-36 md:w-56 shadow-2xl border-cyan-500/20">
-            <div class="flex justify-between items-center mb-3">
-                <p class="text-[9px] md:text-xs text-cyan-400 font-black uppercase tracking-widest">Calibration</p>
-                <span id="sensText" class="text-white font-bold text-[9px] bg-slate-800 border border-slate-600 px-2 py-0.5 rounded">Norm (5)</span>
-            </div>
-            <input type="range" id="sensSlider" min="1" max="10" value="5" class="w-full">
-        </div>
             
-        <!-- Overlays -->
-        <div id="loadingOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-40 backdrop-blur-md">
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50 backdrop-blur-md">
             <div class="w-12 h-12 md:w-16 md:h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_20px_rgba(6,182,212,0.6)]"></div>
             <h2 class="text-xl md:text-3xl font-black text-white mb-2 tracking-widest uppercase">Initializing Systems...</h2>
             <p class="text-cyan-400 text-xs md:text-sm text-center px-4 font-bold tracking-widest">Awaiting Optics Connection</p>
         </div>
-        
-        <div id="startOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-40 hidden backdrop-blur-md">
-            <button id="startBtn" disabled class="group relative px-10 md:px-14 py-5 md:py-6 bg-gradient-to-r from-slate-800 to-slate-900 text-slate-400 font-black rounded-2xl text-xl md:text-2xl shadow-lg transition-all border border-slate-700 uppercase tracking-widest cursor-not-allowed">
-                <span class="relative z-10 flex items-center gap-3">
+
+        <!-- Hangar / Menu Overlay -->
+        <div id="menuOverlay" class="absolute inset-0 flex flex-col items-center justify-start bg-black/80 z-40 hidden backdrop-blur-xl overflow-y-auto hide-scrollbar p-4 md:p-8">
+            <h2 class="text-3xl sm:text-4xl font-black text-white mt-4 mb-2 uppercase tracking-widest">Select Deployment</h2>
+            <p class="text-xs text-slate-400 font-bold uppercase mb-8 tracking-widest">Configure Drone & Environment</p>
+
+            <!-- Sensitivity Control -->
+            <div class="w-full max-w-2xl mb-8 glass-panel p-4 rounded-2xl border-cyan-500/30">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-[10px] md:text-xs text-cyan-400 font-black uppercase tracking-widest">Optic Sensitivity Calibration</p>
+                    <span id="sensText" class="text-white font-bold text-[10px] bg-slate-800 border border-slate-600 px-2 py-0.5 rounded">Norm (5)</span>
+                </div>
+                <input type="range" id="sensSlider" min="1" max="10" value="5" class="w-full">
+            </div>
+
+            <!-- Drone Selection -->
+            <div class="w-full max-w-2xl mb-8">
+                <p class="text-cyan-400 text-[10px] font-black uppercase tracking-[0.2em] mb-3 px-2">1. Select Drone Class</p>
+                <div id="droneMenu" class="flex gap-4 overflow-x-auto pb-4 px-2 snap-x hide-scrollbar">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Environment Selection -->
+            <div class="w-full max-w-2xl mb-10">
+                <p class="text-purple-400 text-[10px] font-black uppercase tracking-[0.2em] mb-3 px-2">2. Select Environment</p>
+                <div id="envMenu" class="flex gap-4 overflow-x-auto pb-4 px-2 snap-x hide-scrollbar">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <button id="startBtn" disabled class="w-full max-w-sm px-10 py-5 bg-gradient-to-r from-slate-800 to-slate-900 text-slate-400 font-black rounded-2xl text-xl shadow-lg transition-all border border-slate-700 uppercase tracking-widest cursor-not-allowed mb-10">
+                <span class="relative z-10 flex items-center justify-center gap-3">
                     <div id="startSpinner" class="w-6 h-6 border-4 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
                     <svg id="startIcon" class="w-8 h-8 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span id="startText">BOOTING AI CORE...</span>
@@ -127,9 +153,14 @@
                     <p id="finalScore" class="font-black text-6xl md:text-7xl text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">0</p>
                 </div>
 
-                <button id="restartBtn" class="w-full px-8 py-5 bg-white text-black hover:bg-slate-200 font-black rounded-xl text-xl transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.3)] uppercase tracking-widest">
-                    Re-Deploy
-                </button>
+                <div class="flex gap-4 w-full">
+                    <button id="restartBtn" class="flex-1 px-4 py-5 bg-white text-black hover:bg-slate-200 font-black rounded-xl text-lg transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.3)] uppercase tracking-widest">
+                        Retry
+                    </button>
+                    <button id="hangarBtn" class="flex-1 px-4 py-5 bg-slate-800 text-white hover:bg-slate-700 border border-slate-600 font-black rounded-xl text-lg transition-all transform hover:scale-105 active:scale-95 uppercase tracking-widest">
+                        Hangar
+                    </button>
+                </div>
             </div>
         </div>
     </main>
@@ -140,25 +171,73 @@
         const cameraCanvas = document.getElementById('cameraCanvas');
         const cameraCtx = cameraCanvas.getContext('2d');
         const gameCanvas = document.getElementById('gameCanvas');
-        const gameCtx = gameCanvas.getContext('2d', { alpha: false }); // Optimize for opaque background
+        const gameCtx = gameCanvas.getContext('2d', { alpha: false }); 
         
         const loadingOverlay = document.getElementById('loadingOverlay');
-        const startOverlay = document.getElementById('startOverlay');
+        const menuOverlay = document.getElementById('menuOverlay');
         const startBtn = document.getElementById('startBtn');
         const gameOverOverlay = document.getElementById('gameOverOverlay');
         const restartBtn = document.getElementById('restartBtn');
+        const hangarBtn = document.getElementById('hangarBtn');
         const infoBtn = document.getElementById('infoBtn');
         
         const trackingIndicator = document.getElementById('trackingIndicator');
         const scoreDisplay = document.getElementById('scoreDisplay');
         const highScoreDisplay = document.getElementById('highScoreDisplay');
         const finalScore = document.getElementById('finalScore');
+        const headerSubtitle = document.getElementById('headerSubtitle');
         
         const sensSlider = document.getElementById('sensSlider');
         const sensText = document.getElementById('sensText');
 
+        // --- Data Configurations ---
+        const BIRDS = [
+            { id: 'falcon', name: 'Cyber Falcon', icon: '🦅', desc: 'Balanced stats.', radius: 22, spring: 0.18, color: '#06b6d4', aura: '#22d3ee', theme: 'text-cyan-400', special: 'None' },
+            { id: 'nano', name: 'Nano Bird', icon: '🕊️', desc: 'Tiny hitbox. Fast turning.', radius: 14, spring: 0.28, color: '#f59e0b', aura: '#fde047', theme: 'text-amber-400', special: 'Agility' },
+            { id: 'bomber', name: 'Heavy Bomber', icon: '🦉', desc: 'Huge hitbox. Pre-shielded.', radius: 30, spring: 0.10, color: '#ef4444', aura: '#f87171', theme: 'text-red-400', special: 'Auto-Shield' }
+        ];
+
+        const ENVS = [
+            { id: 'industrial', name: 'Industrial Sector', icon: '🏭', desc: 'Cyberpunk pillars', skyTop: '#1e1b4b', skyBot: '#ea580c', sun1: 'rgba(253,224,71,0.8)', mnt1: '#4c1d95', mnt2: '#312e81', pipeFill: '#1e293b', pipeEdge: '#06b6d4' },
+            { id: 'jungle', name: 'Toxic Jungle', icon: '🌴', desc: 'Bio-luminescent flora', skyTop: '#022c22', skyBot: '#65a30d', sun1: 'rgba(190,242,100,0.8)', mnt1: '#064e3b', mnt2: '#065f46', pipeFill: '#3f6212', pipeEdge: '#a3e635' },
+            { id: 'caves', name: 'Crystal Caves', icon: '💎', desc: 'Sharp stalactites', skyTop: '#2e1065', skyBot: '#a855f7', sun1: 'rgba(232,121,249,0.8)', mnt1: '#4c1d95', mnt2: '#581c87', pipeFill: '#2e1065', pipeEdge: '#d946ef' }
+        ];
+
+        let selBird = 0;
+        let selEnv = 0;
+
+        // Build Menus
+        const droneMenu = document.getElementById('droneMenu');
+        BIRDS.forEach((b, i) => {
+            const el = document.createElement('div');
+            el.className = `select-card flex-none w-48 sm:w-56 bg-slate-800/80 rounded-2xl p-5 cursor-pointer snap-center text-center shadow-lg ${b.theme} ${i === 0 ? 'active' : 'border-slate-700'}`;
+            el.innerHTML = `<div class="text-4xl mb-2">${b.icon}</div><h3 class="font-black uppercase tracking-wide text-sm mb-1">${b.name}</h3><p class="text-[10px] text-slate-400 font-bold tracking-wider h-6">${b.desc}</p>
+                            <div class="mt-2 inline-block px-2 py-1 bg-black/40 rounded text-[9px] font-black tracking-widest border border-white/5 uppercase">Ability: ${b.special}</div>`;
+            el.onclick = () => {
+                document.querySelectorAll('#droneMenu .select-card').forEach(c => { c.classList.remove('active'); c.style.borderColor = 'transparent'; });
+                el.classList.add('active'); el.style.borderColor = b.aura; selBird = i;
+            };
+            if(i===0) el.style.borderColor = b.aura;
+            droneMenu.appendChild(el);
+        });
+
+        const envMenu = document.getElementById('envMenu');
+        ENVS.forEach((e, i) => {
+            const el = document.createElement('div');
+            el.className = `select-card flex-none w-48 sm:w-56 bg-slate-800/80 rounded-2xl p-5 cursor-pointer snap-center text-center shadow-lg text-white ${i === 0 ? 'active' : 'border-slate-700'}`;
+            el.innerHTML = `<div class="text-4xl mb-2">${e.icon}</div><h3 class="font-black uppercase tracking-wide text-sm mb-1">${e.name}</h3><p class="text-[10px] text-slate-400 font-bold tracking-wider h-6">${e.desc}</p>
+                            <div class="mt-3 w-full h-3 rounded overflow-hidden flex"><div class="flex-1" style="background:${e.skyTop}"></div><div class="flex-1" style="background:${e.mnt1}"></div><div class="flex-1" style="background:${e.pipeEdge}"></div></div>`;
+            el.onclick = () => {
+                document.querySelectorAll('#envMenu .select-card').forEach(c => { c.classList.remove('active'); c.style.borderColor = 'transparent'; });
+                el.classList.add('active'); el.style.borderColor = e.pipeEdge; selEnv = i;
+            };
+            if(i===0) el.style.borderColor = e.pipeEdge;
+            envMenu.appendChild(el);
+        });
+
+
         // --- Game Variables ---
-        let gameState = 'IDLE'; 
+        let gameState = 'MENU'; // MENU, COUNTDOWN, PLAYING, GAMEOVER
         let score = 0;
         let highScore = localStorage.getItem('arFlappyImmersiveScore') || 0;
         highScoreDisplay.innerText = highScore;
@@ -171,35 +250,20 @@
         let countdownValue = 3;
         let countdownTimer = 0;
 
-        // Post Processing / Effects
         let shakeIntensity = 0;
 
-        // Scenery Elements (Parallax)
-        let mountainsL1 = []; // Far
-        let mountainsL2 = []; // Mid
-        let mountainsL3 = []; // Fore
-        let fogParticles = [];
+        let mountainsL1 = []; let mountainsL2 = []; let mountainsL3 = []; let fogParticles = [];
 
-        // Advanced Game State
         let hasShield = false;
         let coins = [];
         let powerups = [];
 
-        // Mechanical Falcon State
-        const bird = {
-            x: 220,
-            y: gameCanvas.height / 2,
-            radius: 22,
-            vy: 0,
-            lastY: gameCanvas.height / 2,
-            engineHeat: 0
-        };
+        const bird = { x: 220, y: gameCanvas.height / 2, radius: 22, vy: 0, lastY: gameCanvas.height / 2, engineHeat: 0 };
 
-        // Industrial Pillars
         let pipes = [];
         const pipeWidth = 100;
-        let pipeGap = 320; // Increased starting gap for easier normal difficulty
-        let pipeSpeedBase = 4.0; // Reduced to start slower
+        let pipeGap = 320; 
+        let pipeSpeedBase = 4.0; 
         let pipeSpeed = pipeSpeedBase;
         let frames = 0;
 
@@ -230,11 +294,8 @@
                 osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.6);
                 gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
                 
-                // Noise buffer for metallic crunch
-                const bufferSize = audioCtx.sampleRate * 0.6;
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const bufferSize = audioCtx.sampleRate * 0.6; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
                 const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
                 const noiseFilter = audioCtx.createBiquadFilter(); noiseFilter.type = 'lowpass'; noiseFilter.frequency.value = 500;
                 noise.connect(noiseFilter); noiseFilter.connect(gain); noise.start(t);
@@ -264,16 +325,12 @@
         }
 
         function triggerFirecrackers() {
-            // Firing a single, clean burst prevents the game from hanging or lagging
             confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.6 }, colors: ['#22d3ee', '#3b82f6', '#818cf8'], zIndex: 100 });
             confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.6 }, colors: ['#22d3ee', '#3b82f6', '#818cf8'], zIndex: 100 });
         }
 
-        // --- Setup Scenery (Procedural Generation) ---
         function initScenery() {
             mountainsL1 = []; mountainsL2 = []; mountainsL3 = []; fogParticles = [];
-            
-            // Generate jagged mountain paths
             let generateMountain = (roughness, heightBase, variance) => {
                 let points = [];
                 for(let x=0; x<gameCanvas.width + 300; x+=roughness) {
@@ -281,20 +338,11 @@
                 }
                 return points;
             };
-
-            mountainsL1 = generateMountain(80, 200, 150); // Far (Sunset colors)
-            mountainsL2 = generateMountain(60, 100, 200); // Mid (Dark purple)
-            mountainsL3 = generateMountain(40, 0, 150);   // Fore (Almost black)
-
-            // Initial fog
+            mountainsL1 = generateMountain(80, 200, 150); 
+            mountainsL2 = generateMountain(60, 100, 200); 
+            mountainsL3 = generateMountain(40, 0, 150);   
             for(let i=0; i<30; i++) {
-                fogParticles.push({
-                    x: Math.random() * gameCanvas.width,
-                    y: gameCanvas.height - Math.random() * 150,
-                    size: 50 + Math.random() * 100,
-                    vx: -1 - Math.random() * 2,
-                    opacity: 0.05 + Math.random() * 0.1
-                });
+                fogParticles.push({ x: Math.random() * gameCanvas.width, y: gameCanvas.height - Math.random() * 150, size: 50 + Math.random() * 100, vx: -1 - Math.random() * 2, opacity: 0.05 + Math.random() * 0.1 });
             }
         }
 
@@ -303,7 +351,6 @@
 
         let savedSens = parseInt(localStorage.getItem('arFlappyImmersiveSens')) || 5;
         sensSlider.value = savedSens; updateSensText(savedSens);
-
         sensSlider.addEventListener('input', (e) => {
             const val = parseInt(e.target.value);
             updateSensText(val); localStorage.setItem('arFlappyImmersiveSens', val);
@@ -343,7 +390,6 @@
                 let normalizedY = (nose.y - offset) / faceRange;
                 normalizedY = Math.max(0, Math.min(1, normalizedY));
                 targetBirdY = normalizedY * gameCanvas.height;
-                
             } else {
                 faceDetected = false;
                 trackingIndicator.classList.replace('bg-cyan-400', 'bg-red-600');
@@ -354,9 +400,8 @@
 
         const camera = new Camera(videoElement, { onFrame: async () => { await faceMesh.send({image: videoElement}); }, width: 640, height: 480, facingMode: 'user' });
 
-        loadingOverlay.classList.add('hidden'); startOverlay.classList.remove('hidden');
+        loadingOverlay.classList.add('hidden'); menuOverlay.classList.remove('hidden');
 
-        // --- PRELOAD AI MODEL: Eliminates the long loading delay! ---
         faceMesh.initialize().then(() => {
             const btn = document.getElementById('startBtn');
             const spinner = document.getElementById('startSpinner');
@@ -364,51 +409,56 @@
             const text = document.getElementById('startText');
             
             btn.disabled = false;
-            btn.className = "group relative px-10 md:px-14 py-5 md:py-6 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-black rounded-2xl text-xl md:text-2xl shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-all transform hover:scale-105 active:scale-95 border border-cyan-400/50 uppercase tracking-widest cursor-pointer";
-            
-            spinner.classList.add('hidden');
-            icon.classList.remove('hidden');
-            text.innerText = "Engage Thrusters";
+            btn.className = "w-full max-w-sm px-10 py-5 bg-gradient-to-r from-cyan-600 to-blue-700 text-white font-black rounded-2xl text-xl shadow-[0_0_40px_rgba(6,182,212,0.5)] transition-all transform hover:scale-105 active:scale-95 border border-cyan-400/50 uppercase tracking-widest cursor-pointer mb-10";
+            spinner.classList.add('hidden'); icon.classList.remove('hidden'); text.innerText = "Engage Thrusters";
         });
 
         function beginCountdown() {
-            gameState = 'COUNTDOWN';
-            countdownValue = 3;
-            countdownTimer = 60; // 60 frames = approx 1 second
-            playSound('beep');
+            gameState = 'COUNTDOWN'; countdownValue = 3; countdownTimer = 60; playSound('beep');
+        }
+
+        function openHangar() {
+            gameState = 'MENU';
+            gameOverOverlay.classList.add('hidden'); menuOverlay.classList.remove('hidden');
+            headerSubtitle.innerText = "Hangar Access"; headerSubtitle.className = "text-[10px] md:text-xs text-cyan-500 font-bold uppercase tracking-widest mt-0.5 animate-pulse";
         }
 
         startBtn.addEventListener('click', () => {
-            initAudio(); startOverlay.classList.add('hidden'); loadingOverlay.classList.remove('hidden');
+            initAudio(); menuOverlay.classList.add('hidden'); loadingOverlay.classList.remove('hidden');
             loadingOverlay.querySelector('h2').innerText = "Connecting Optics...";
-            loadingOverlay.querySelector('p').innerText = "Please allow camera access in your browser.";
             camera.start().then(() => {
                 loadingOverlay.classList.add('hidden'); resetGame(); beginCountdown(); gameLoop();
-            }).catch(err => { 
-                loadingOverlay.querySelector('h2').innerText = "Sensor Error!"; 
-                loadingOverlay.querySelector('p').innerText = "Camera access denied or unavailable.";
-            });
+            }).catch(err => { loadingOverlay.querySelector('h2').innerText = "Sensor Error!"; });
         });
 
         restartBtn.addEventListener('click', () => { gameOverOverlay.classList.add('hidden'); resetGame(); beginCountdown(); });
+        hangarBtn.addEventListener('click', openHangar);
 
         infoBtn.addEventListener('click', () => {
             let docsHTML = document.getElementById('docsContent').textContent;
-            // Safely restore script tag in generated document
             docsHTML = docsHTML.replace(/<\\\/script>/g, '<' + '/script>');
             const newWindow = window.open('', '_blank');
-            newWindow.document.write(docsHTML);
-            newWindow.document.close();
+            newWindow.document.write(docsHTML); newWindow.document.close();
         });
 
         // --- Game Engine ---
-
         function resetGame() {
+            // Apply Drone Stats
+            const bStats = BIRDS[selBird];
+            bird.radius = bStats.radius;
             bird.y = gameCanvas.height / 2; bird.lastY = bird.y; bird.vy = 0; bird.engineHeat = 0;
+            
+            // Bomber special
+            hasShield = (selBird === 2);
+
             targetBirdY = gameCanvas.height / 2; isFirstTrackingFrame = true; shakeIntensity = 0;
-            pipes = []; particles = []; coins = []; powerups = []; popups = []; hasShield = false;
+            pipes = []; particles = []; coins = []; powerups = []; popups = []; 
             score = 0; frames = 0; pipeSpeed = pipeSpeedBase; pipeGap = 320; celebratedForScore = 0;
             updateScoreDisplay(); initScenery();
+
+            headerSubtitle.innerText = "Motion Interface Locked";
+            headerSubtitle.className = `text-[10px] md:text-xs ${bStats.theme} font-bold uppercase tracking-widest mt-0.5 animate-pulse`;
+            scoreDisplay.className = `text-3xl md:text-4xl font-black ${bStats.theme} glow-text leading-none`;
         }
 
         function updateScoreDisplay() {
@@ -427,119 +477,76 @@
             pipes.push({ x: gameCanvas.width, top: topHeight, bottom: topHeight + pipeGap, passed: false, moving: isMoving, dir: moveDir, startTop: topHeight });
 
             if (Math.random() > 0.4) coins.push({ x: gameCanvas.width + pipeWidth/2, y: topHeight + pipeGap/2, collected: false, offset: Math.random()*Math.PI*2 });
-            if (score >= 5 && Math.random() > 0.85 && !hasShield) powerups.push({ x: gameCanvas.width + pipeWidth*2, y: Math.random() * (gameCanvas.height - 150) + 75, type: 'shield', collected: false });
+            // Only spawn shield if not bomber and doesn't have shield
+            if (selBird !== 2 && score >= 5 && Math.random() > 0.85 && !hasShield) powerups.push({ x: gameCanvas.width + pipeWidth*2, y: Math.random() * (gameCanvas.height - 150) + 75, type: 'shield', collected: false });
         }
 
         function update() {
-            if (gameState === 'GAMEOVER' || gameState === 'IDLE') return;
+            if (gameState === 'GAMEOVER' || gameState === 'MENU') return;
 
-            if (faceDetected && isFirstTrackingFrame) {
-                bird.y = targetBirdY; bird.lastY = targetBirdY; isFirstTrackingFrame = false;
-            }
+            if (faceDetected && isFirstTrackingFrame) { bird.y = targetBirdY; bird.lastY = targetBirdY; isFirstTrackingFrame = false; }
 
             if (gameState === 'COUNTDOWN') {
                 countdownTimer--;
                 if (countdownTimer <= 0) {
                     countdownValue--;
-                    if (countdownValue > 0) {
-                        countdownTimer = 60;
-                        playSound('beep');
-                    } else if (countdownValue === 0) {
-                        countdownTimer = 60;
-                        playSound('go');
-                    } else {
-                        gameState = 'PLAYING';
-                    }
+                    if (countdownValue > 0) { countdownTimer = 60; playSound('beep'); } 
+                    else if (countdownValue === 0) { countdownTimer = 60; playSound('go'); } 
+                    else { gameState = 'PLAYING'; }
                 }
-                
-                // Allow bird to snap to face during countdown
-                if (faceDetected) {
-                    bird.y += (targetBirdY - bird.y) * 0.2;
-                    bird.lastY = bird.y;
-                    bird.vy = 0;
-                }
-                return; // Skip the rest of the game logic during countdown
+                if (faceDetected) { bird.y += (targetBirdY - bird.y) * BIRDS[selBird].spring; bird.lastY = bird.y; bird.vy = 0; }
+                return;
             }
 
             // Advanced Drone Physics
             bird.lastY = bird.y;
-            bird.y += (targetBirdY - bird.y) * 0.18; // Slightly tighter spring for mechanical feel
+            bird.y += (targetBirdY - bird.y) * BIRDS[selBird].spring; 
             bird.y = Math.max(bird.radius, Math.min(gameCanvas.height - bird.radius, bird.y));
             bird.vy = bird.y - bird.lastY; 
-            
-            // Engine heat based on vertical thrust
             bird.engineHeat = Math.min(1.0, Math.abs(bird.vy) / 10);
 
-            // Drone Exhaust (Jet Particles)
             if (frames % 2 === 0) {
-                let heatColor = bird.vy < -2 ? '#22d3ee' : (bird.vy > 2 ? '#f97316' : '#94a3b8'); // Cyan up, Orange down, Gray idle
+                let heatColor = bird.vy < -2 ? BIRDS[selBird].aura : (bird.vy > 2 ? '#f97316' : '#94a3b8'); 
                 particles.push({
                     x: bird.x - bird.radius - 5, y: bird.y + (Math.random()-0.5)*10,
-                    size: Math.random() * 5 + 3, life: 1, color: heatColor,
+                    size: Math.random() * (selBird===2?8:5) + 3, life: 1, color: heatColor,
                     vx: -pipeSpeed * (1 + Math.random()*0.5), vy: bird.vy * 0.2 + (Math.random()-0.5)*2
                 });
             }
 
-            // Scenery Update
             let scrollMountain = (layer, speed) => {
-                for(let i=0; i<layer.length; i++) {
-                    layer[i].x -= speed;
-                }
-                // Recycle points if they go off screen to create endless loop
-                if (layer[0].x < -200) {
-                    let last = layer[layer.length-1];
-                    layer.shift();
-                    layer.push({ x: last.x + (layer[1].x - layer[0].x), y: last.y + (Math.random()-0.5)*50 }); // rough procedural continuation
-                }
+                for(let i=0; i<layer.length; i++) layer[i].x -= speed;
+                if (layer[0].x < -200) { let last = layer[layer.length-1]; layer.shift(); layer.push({ x: last.x + (layer[1].x - layer[0].x), y: last.y + (Math.random()-0.5)*50 }); }
             };
-            scrollMountain(mountainsL1, pipeSpeed * 0.1);
-            scrollMountain(mountainsL2, pipeSpeed * 0.3);
-            scrollMountain(mountainsL3, pipeSpeed * 0.6);
+            scrollMountain(mountainsL1, pipeSpeed * 0.1); scrollMountain(mountainsL2, pipeSpeed * 0.3); scrollMountain(mountainsL3, pipeSpeed * 0.6);
 
-            // Fog update
-            fogParticles.forEach(f => {
-                f.x += f.vx; f.y -= Math.random() * 0.5;
-                if(f.x < -100) { f.x = gameCanvas.width + 100; f.y = gameCanvas.height - Math.random()*150; }
-            });
+            fogParticles.forEach(f => { f.x += f.vx; f.y -= Math.random() * 0.5; if(f.x < -100) { f.x = gameCanvas.width + 100; f.y = gameCanvas.height - Math.random()*150; }});
 
             if (frames % Math.max(75, 150 - Math.floor(score*0.8)) === 0) spawnPipe();
 
             for (let i = pipes.length - 1; i >= 0; i--) {
                 let p = pipes[i]; p.x -= pipeSpeed;
+                if (p.moving) { p.top += p.dir * 2; p.bottom += p.dir * 2; if (Math.abs(p.top - p.startTop) > 70) p.dir *= -1; }
 
-                if (p.moving) {
-                    p.top += p.dir * 2; p.bottom += p.dir * 2;
-                    if (Math.abs(p.top - p.startTop) > 70) p.dir *= -1; 
-                }
-
-                // Rigid Box Collision
                 let hitX = bird.x + bird.radius - 4 > p.x && bird.x - bird.radius + 4 < p.x + pipeWidth;
                 let hitY = bird.y - bird.radius + 4 < p.top || bird.y + bird.radius - 4 > p.bottom;
                 
                 if ((hitX && hitY) || bird.y + bird.radius >= gameCanvas.height - 5) {
                     if (hasShield && bird.y < gameCanvas.height - 10) {
                         hasShield = false; playSound('shieldBreak'); shakeIntensity = 15;
-                        popups.push({text: "SHIELD OFFLINE", x: bird.x, y: bird.y - 50, life: 1, color: '#38bdf8'});
-                        for(let k=0; k<25; k++) particles.push({x: bird.x, y: bird.y, size: Math.random()*6+2, life: 1, color: '#38bdf8', vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15});
+                        popups.push({text: "SHIELD OFFLINE", x: bird.x, y: bird.y - 50, life: 1, color: BIRDS[selBird].aura});
+                        for(let k=0; k<25; k++) particles.push({x: bird.x, y: bird.y, size: Math.random()*6+2, life: 1, color: BIRDS[selBird].aura, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15});
                         pipes.splice(i, 1); continue;
                     } else {
                         playSound('crash'); gameState = 'GAMEOVER'; gameOverOverlay.classList.remove('hidden'); finalScore.innerText = score;
-                        shakeIntensity = 30; // Massive shake
+                        shakeIntensity = 30; 
                     }
                 }
 
                 if (p.x + pipeWidth < bird.x && !p.passed) {
                     score++; p.passed = true; playSound('score'); updateScoreDisplay();
-                    
-                    // Progressive Difficulty: Increase speed and tighten gap gradually
-                    pipeSpeed = pipeSpeedBase + (score * 0.1); 
-                    pipeGap = Math.max(180, 320 - (score * 4)); 
-                    
-                    // Celebrate every 10 obstacles
-                    if (score > 0 && score % 10 === 0 && celebratedForScore !== score) { 
-                        triggerFirecrackers(); 
-                        celebratedForScore = score; 
-                    }
+                    pipeSpeed = pipeSpeedBase + (score * 0.1); pipeGap = Math.max(180, 320 - (score * 4)); 
+                    if (score > 0 && score % 10 === 0 && celebratedForScore !== score) { triggerFirecrackers(); celebratedForScore = score; }
                 }
                 if (p.x + pipeWidth < -50) pipes.splice(i, 1);
             }
@@ -572,55 +579,47 @@
             frames++;
         }
 
-        // Post-processing wrapper
         function applyCameraEffects() {
             if (shakeIntensity > 0) {
                 gameCtx.translate((Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity);
                 shakeIntensity *= 0.85; if (shakeIntensity < 0.5) shakeIntensity = 0;
             }
 
-            // HUD Vignette (Simulates drone optics)
             const gradient = gameCtx.createRadialGradient(gameCanvas.width/2, gameCanvas.height/2, gameCanvas.height * 0.4, gameCanvas.width/2, gameCanvas.height/2, gameCanvas.height * 0.9);
             gradient.addColorStop(0, 'rgba(0,0,0,0)'); gradient.addColorStop(1, 'rgba(2,6,23,0.7)');
             gameCtx.fillStyle = gradient; gameCtx.globalCompositeOperation = 'multiply'; gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
             gameCtx.globalCompositeOperation = 'source-over';
 
-            // Scanlines
             gameCtx.fillStyle = 'rgba(255, 255, 255, 0.03)';
             for(let i=0; i<gameCanvas.height; i+=4) gameCtx.fillRect(0, i, gameCanvas.width, 1); 
             
-            // HUD Elements
             gameCtx.strokeStyle = 'rgba(34, 211, 238, 0.4)'; gameCtx.lineWidth = 1;
-            
-            // Center Crosshair
             gameCtx.beginPath(); gameCtx.arc(gameCanvas.width/2, gameCanvas.height/2, 40, 0, Math.PI*2); gameCtx.stroke();
             gameCtx.beginPath(); gameCtx.moveTo(gameCanvas.width/2 - 60, gameCanvas.height/2); gameCtx.lineTo(gameCanvas.width/2 - 20, gameCanvas.height/2); gameCtx.stroke();
             gameCtx.beginPath(); gameCtx.moveTo(gameCanvas.width/2 + 20, gameCanvas.height/2); gameCtx.lineTo(gameCanvas.width/2 + 60, gameCanvas.height/2); gameCtx.stroke();
             
-            // Altitude Meter (Right side)
             let altX = gameCanvas.width - 40;
             gameCtx.beginPath(); gameCtx.moveTo(altX, 100); gameCtx.lineTo(altX, gameCanvas.height - 100); gameCtx.stroke();
             for(let y=100; y<=gameCanvas.height-100; y+=40) { gameCtx.beginPath(); gameCtx.moveTo(altX, y); gameCtx.lineTo(altX+10, y); gameCtx.stroke(); }
-            // Current Alt Marker
+            
             let birdAltY = Math.max(100, Math.min(gameCanvas.height-100, bird.y));
-            gameCtx.fillStyle = '#38bdf8'; gameCtx.beginPath(); gameCtx.moveTo(altX-5, birdAltY); gameCtx.lineTo(altX-15, birdAltY-10); gameCtx.lineTo(altX-15, birdAltY+10); gameCtx.fill();
+            gameCtx.fillStyle = BIRDS[selBird].color; gameCtx.beginPath(); gameCtx.moveTo(altX-5, birdAltY); gameCtx.lineTo(altX-15, birdAltY-10); gameCtx.lineTo(altX-15, birdAltY+10); gameCtx.fill();
 
             gameCtx.setTransform(1, 0, 0, 1, 0, 0);
         }
 
         function draw() {
-            // Base Sky (Sunset)
+            const env = ENVS[selEnv];
+
+            // Base Sky
             const bgGrad = gameCtx.createLinearGradient(0, 0, 0, gameCanvas.height);
-            bgGrad.addColorStop(0, '#1e1b4b'); // Deep purple
-            bgGrad.addColorStop(0.5, '#9d174d'); // Pinkish
-            bgGrad.addColorStop(1, '#ea580c'); // Orange
-            gameCtx.fillStyle = bgGrad;
-            gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+            bgGrad.addColorStop(0, env.skyTop); bgGrad.addColorStop(1, env.skyBot); 
+            gameCtx.fillStyle = bgGrad; gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
             // Giant Sun
             gameCtx.globalCompositeOperation = 'screen';
             let sunGrad = gameCtx.createRadialGradient(gameCanvas.width*0.3, gameCanvas.height*0.6, 0, gameCanvas.width*0.3, gameCanvas.height*0.6, 300);
-            sunGrad.addColorStop(0, 'rgba(253, 224, 71, 0.8)'); sunGrad.addColorStop(0.5, 'rgba(234, 88, 12, 0.4)'); sunGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            sunGrad.addColorStop(0, env.sun1); sunGrad.addColorStop(1, 'rgba(0,0,0,0)');
             gameCtx.fillStyle = sunGrad; gameCtx.fillRect(0,0,gameCanvas.width,gameCanvas.height);
             gameCtx.globalCompositeOperation = 'source-over';
 
@@ -633,11 +632,11 @@
                 gameCtx.lineTo(layer[layer.length-1].x, gameCanvas.height);
                 gameCtx.fill();
             };
-            drawLayer(mountainsL1, '#4c1d95'); // L1
-            drawLayer(mountainsL2, '#312e81'); // L2
-            drawLayer(mountainsL3, '#0f172a'); // L3 Fore
+            drawLayer(mountainsL1, env.mnt1); 
+            drawLayer(mountainsL2, env.mnt2); 
+            drawLayer(mountainsL3, '#0f172a'); // Fore is always dark
 
-            // Draw Volumetric Fog
+            // Fog
             gameCtx.globalCompositeOperation = 'screen';
             fogParticles.forEach(f => {
                 let fGrad = gameCtx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.size);
@@ -646,7 +645,7 @@
             });
             gameCtx.globalCompositeOperation = 'source-over';
 
-            // Draw Particles
+            // Particles
             gameCtx.globalCompositeOperation = 'screen';
             particles.forEach(p => {
                 gameCtx.globalAlpha = Math.max(0, p.life); gameCtx.fillStyle = p.color;
@@ -654,7 +653,7 @@
             });
             gameCtx.globalAlpha = 1.0; gameCtx.globalCompositeOperation = 'source-over';
 
-            // Draw Powerups & Coins
+            // Coins
             coins.forEach(c => {
                 let floatY = c.y + Math.sin(frames * 0.1 + c.offset) * 10;
                 gameCtx.fillStyle = '#fbbf24'; gameCtx.shadowColor = '#fde047'; gameCtx.shadowBlur = 15;
@@ -672,78 +671,102 @@
                 gameCtx.shadowBlur = 0;
             });
 
-            // Textured Industrial Pillars
+            // Dynamic Obstacles
             pipes.forEach(p => {
-                // 3D Cylinder Shading
-                let pGrad = gameCtx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
-                pGrad.addColorStop(0, '#020617'); // Dark left
-                pGrad.addColorStop(0.3, '#334155'); // Highlight
-                pGrad.addColorStop(0.7, '#1e293b'); // Mid
-                pGrad.addColorStop(1, '#020617'); // Dark right
-                gameCtx.fillStyle = pGrad; 
+                if (selEnv === 0) {
+                    // Industrial Pillars
+                    let pGrad = gameCtx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
+                    pGrad.addColorStop(0, '#020617'); pGrad.addColorStop(0.3, env.pipeFill); pGrad.addColorStop(0.7, '#1e293b'); pGrad.addColorStop(1, '#020617'); 
+                    gameCtx.fillStyle = pGrad; 
+                    gameCtx.beginPath(); gameCtx.roundRect(p.x, 0, pipeWidth, p.top, [0, 0, 4, 4]); gameCtx.fill();
+                    gameCtx.beginPath(); gameCtx.roundRect(p.x, p.bottom, pipeWidth, gameCanvas.height - p.bottom, [4, 4, 0, 0]); gameCtx.fill();
+                    
+                    gameCtx.strokeStyle = 'rgba(0,0,0,0.6)'; gameCtx.lineWidth = 2;
+                    gameCtx.beginPath(); gameCtx.moveTo(p.x + 20, 0); gameCtx.lineTo(p.x + 20, p.top); gameCtx.stroke();
+                    gameCtx.beginPath(); gameCtx.moveTo(p.x + pipeWidth - 20, p.bottom); gameCtx.lineTo(p.x + pipeWidth - 20, gameCanvas.height); gameCtx.stroke();
+                    
+                    gameCtx.shadowColor = env.pipeEdge; gameCtx.shadowBlur = 15; gameCtx.fillStyle = env.pipeEdge;
+                    gameCtx.fillRect(p.x - 2, p.top - 15, pipeWidth + 4, 15); gameCtx.fillRect(p.x - 2, p.bottom, pipeWidth + 4, 15);
+                    gameCtx.shadowBlur = 0;
+                } else if (selEnv === 1) {
+                    // Toxic Jungle Trees
+                    gameCtx.fillStyle = '#271c19'; // Brown trunk
+                    gameCtx.fillRect(p.x + 20, 0, pipeWidth - 40, p.top);
+                    gameCtx.fillRect(p.x + 20, p.bottom, pipeWidth - 40, gameCanvas.height - p.bottom);
 
-                gameCtx.beginPath(); gameCtx.roundRect(p.x, 0, pipeWidth, p.top, [0, 0, 4, 4]); gameCtx.fill();
-                gameCtx.beginPath(); gameCtx.roundRect(p.x, p.bottom, pipeWidth, gameCanvas.height - p.bottom, [4, 4, 0, 0]); gameCtx.fill();
-                
-                // Panel Lines & Rivets
-                gameCtx.strokeStyle = 'rgba(0,0,0,0.6)'; gameCtx.lineWidth = 2;
-                gameCtx.beginPath(); gameCtx.moveTo(p.x + 20, 0); gameCtx.lineTo(p.x + 20, p.top); gameCtx.stroke();
-                gameCtx.beginPath(); gameCtx.moveTo(p.x + pipeWidth - 20, p.bottom); gameCtx.lineTo(p.x + pipeWidth - 20, gameCanvas.height); gameCtx.stroke();
-                
-                // Glowing Warning Rings
-                gameCtx.shadowColor = '#06b6d4'; gameCtx.shadowBlur = 15; gameCtx.fillStyle = '#06b6d4';
-                gameCtx.fillRect(p.x - 2, p.top - 15, pipeWidth + 4, 15);
-                gameCtx.fillRect(p.x - 2, p.bottom, pipeWidth + 4, 15);
-                gameCtx.shadowBlur = 0;
+                    gameCtx.fillStyle = env.pipeFill; gameCtx.shadowColor = env.pipeEdge; gameCtx.shadowBlur = 10;
+                    // Top foliage
+                    for(let fy=0; fy<=p.top; fy+=40) { gameCtx.beginPath(); gameCtx.arc(p.x + pipeWidth/2, fy, 35 + Math.sin(fy)*10, 0, Math.PI*2); gameCtx.fill(); }
+                    // Bottom foliage
+                    for(let fy=p.bottom; fy<=gameCanvas.height; fy+=40) { gameCtx.beginPath(); gameCtx.arc(p.x + pipeWidth/2, fy, 35 + Math.sin(fy)*10, 0, Math.PI*2); gameCtx.fill(); }
+                    gameCtx.shadowBlur = 0;
+                } else if (selEnv === 2) {
+                    // Crystal Caves
+                    let cGrad = gameCtx.createLinearGradient(p.x, 0, p.x + pipeWidth, 0);
+                    cGrad.addColorStop(0, env.pipeFill); cGrad.addColorStop(0.5, env.pipeEdge); cGrad.addColorStop(1, env.pipeFill);
+                    gameCtx.fillStyle = cGrad;
+                    gameCtx.shadowColor = env.pipeEdge; gameCtx.shadowBlur = 20;
+
+                    // Top Crystal
+                    gameCtx.beginPath(); gameCtx.moveTo(p.x, 0); gameCtx.lineTo(p.x + pipeWidth, 0); gameCtx.lineTo(p.x + pipeWidth/2, p.top); gameCtx.fill();
+                    // Bottom Crystal
+                    gameCtx.beginPath(); gameCtx.moveTo(p.x, gameCanvas.height); gameCtx.lineTo(p.x + pipeWidth, gameCanvas.height); gameCtx.lineTo(p.x + pipeWidth/2, p.bottom); gameCtx.fill();
+                    gameCtx.shadowBlur = 0;
+                }
             });
 
-            // Draw Mechanical Falcon (Drone)
+            // Draw Drone
             gameCtx.save();
             gameCtx.translate(bird.x, bird.y);
-            
-            // Dynamic tilt based on velocity and thrust
             let targetTilt = Math.max(-0.5, Math.min(0.5, bird.vy * 0.08));
             gameCtx.rotate(targetTilt); 
 
-            // Chassis (Metallic grey)
-            gameCtx.fillStyle = '#475569';
-            gameCtx.beginPath(); gameCtx.ellipse(0, 0, bird.radius+4, bird.radius-4, 0, 0, Math.PI * 2); gameCtx.fill();
+            let bStats = BIRDS[selBird];
+
+            if (selBird === 0) {
+                // CYBER FALCON
+                gameCtx.fillStyle = '#475569'; gameCtx.beginPath(); gameCtx.ellipse(0, 0, bird.radius+4, bird.radius-4, 0, 0, Math.PI * 2); gameCtx.fill();
+                gameCtx.fillStyle = '#94a3b8'; gameCtx.beginPath(); gameCtx.ellipse(4, -2, bird.radius-4, bird.radius-8, 0, 0, Math.PI * 2); gameCtx.fill();
+                gameCtx.shadowColor = bStats.aura; gameCtx.shadowBlur = 15; gameCtx.fillStyle = bStats.color;
+                gameCtx.beginPath(); gameCtx.moveTo(10, -5); gameCtx.lineTo(25, -2); gameCtx.lineTo(10, 5); gameCtx.fill();
+                gameCtx.fillStyle = '#fff'; gameCtx.beginPath(); gameCtx.arc(15, 0, 2, 0, Math.PI*2); gameCtx.fill(); gameCtx.shadowBlur = 0;
+                gameCtx.fillStyle = '#1e293b'; const wingFlap = Math.sin(frames * 0.8) * (8 + bird.engineHeat * 5); 
+                gameCtx.beginPath(); gameCtx.moveTo(-10, 0); gameCtx.lineTo(-20, -10 + wingFlap); gameCtx.lineTo(0, -5 + wingFlap); gameCtx.fill();
+                gameCtx.strokeStyle = bStats.aura; gameCtx.lineWidth = 1; gameCtx.stroke(); 
+                gameCtx.fillStyle = '#0f172a'; gameCtx.beginPath(); gameCtx.moveTo(-bird.radius, 4); gameCtx.lineTo(-bird.radius-10, 8); gameCtx.lineTo(-bird.radius-10, -4); gameCtx.fill();
             
-            // Armor Plating
-            gameCtx.fillStyle = '#94a3b8';
-            gameCtx.beginPath(); gameCtx.ellipse(4, -2, bird.radius-4, bird.radius-8, 0, 0, Math.PI * 2); gameCtx.fill();
-
-            // Glowing Cyan Visor
-            gameCtx.shadowColor = '#22d3ee'; gameCtx.shadowBlur = 15;
-            gameCtx.fillStyle = '#06b6d4';
-            gameCtx.beginPath(); gameCtx.moveTo(10, -5); gameCtx.lineTo(25, -2); gameCtx.lineTo(10, 5); gameCtx.fill();
-            gameCtx.fillStyle = '#fff';
-            gameCtx.beginPath(); gameCtx.arc(15, 0, 2, 0, Math.PI*2); gameCtx.fill();
-            gameCtx.shadowBlur = 0;
-
-            // Mechanical Wing
-            gameCtx.fillStyle = '#1e293b';
-            const wingFlap = Math.sin(frames * 0.8) * (8 + bird.engineHeat * 5); // Flap faster under high load
-            gameCtx.beginPath(); gameCtx.moveTo(-10, 0); gameCtx.lineTo(-20, -10 + wingFlap); gameCtx.lineTo(0, -5 + wingFlap); gameCtx.fill();
-            gameCtx.strokeStyle = '#38bdf8'; gameCtx.lineWidth = 1; gameCtx.stroke(); // Neon edge
-
-            // Thruster Nozzle
-            gameCtx.fillStyle = '#0f172a';
-            gameCtx.beginPath(); gameCtx.moveTo(-bird.radius, 4); gameCtx.lineTo(-bird.radius-10, 8); gameCtx.lineTo(-bird.radius-10, -4); gameCtx.fill();
+            } else if (selBird === 1) {
+                // NANO HUMMINGBIRD
+                gameCtx.fillStyle = '#fde047'; gameCtx.beginPath(); gameCtx.ellipse(0, 0, bird.radius+2, bird.radius-4, 0, 0, Math.PI * 2); gameCtx.fill();
+                gameCtx.shadowColor = bStats.aura; gameCtx.shadowBlur = 10; gameCtx.strokeStyle = bStats.color; gameCtx.lineWidth = 2;
+                gameCtx.beginPath(); gameCtx.moveTo(10, 0); gameCtx.lineTo(30, 2); gameCtx.lineTo(10, 4); gameCtx.stroke(); // Long beak
+                gameCtx.fillStyle = '#000'; gameCtx.beginPath(); gameCtx.arc(8, -2, 2, 0, Math.PI*2); gameCtx.fill(); gameCtx.shadowBlur = 0;
+                // Fast Wings
+                gameCtx.fillStyle = 'rgba(255,255,255,0.8)'; const flap = Math.sin(frames * 1.5) * 12;
+                gameCtx.beginPath(); gameCtx.ellipse(-4, -2, 6, Math.abs(flap)+2, 0, 0, Math.PI*2); gameCtx.fill();
+            
+            } else if (selBird === 2) {
+                // HEAVY BOMBER
+                gameCtx.fillStyle = '#1e293b'; gameCtx.beginPath(); gameCtx.roundRect(-20, -15, 40, 30, 8); gameCtx.fill(); // Bulky
+                gameCtx.fillStyle = '#475569'; gameCtx.beginPath(); gameCtx.roundRect(-15, -10, 30, 20, 4); gameCtx.fill();
+                gameCtx.shadowColor = bStats.aura; gameCtx.shadowBlur = 15; gameCtx.fillStyle = bStats.color;
+                gameCtx.fillRect(15, -8, 8, 16); gameCtx.shadowBlur = 0; // Front visor
+                gameCtx.fillStyle = '#0f172a'; // Dual Thrusters
+                gameCtx.fillRect(-25, -12, 10, 8); gameCtx.fillRect(-25, 4, 10, 8);
+                gameCtx.fillStyle = '#ef4444'; const flap = Math.sin(frames * 0.4) * 4;
+                gameCtx.beginPath(); gameCtx.moveTo(-10, 0); gameCtx.lineTo(-30, -20 + flap); gameCtx.lineTo(0, -10 + flap); gameCtx.fill();
+            }
 
             // Shield Aura
             if (hasShield) {
                 gameCtx.globalCompositeOperation = 'screen';
                 gameCtx.beginPath(); gameCtx.arc(0, 0, bird.radius + 18, 0, Math.PI * 2);
                 gameCtx.strokeStyle = 'rgba(56, 189, 248, 0.8)'; gameCtx.lineWidth = 4; gameCtx.stroke();
-                
-                // Hexagon shield pattern
                 for(let i=0; i<6; i++) {
                     gameCtx.beginPath(); gameCtx.moveTo(0,0);
                     gameCtx.lineTo((bird.radius+18)*Math.cos(i*Math.PI/3), (bird.radius+18)*Math.sin(i*Math.PI/3));
                     gameCtx.strokeStyle = 'rgba(56, 189, 248, 0.3)'; gameCtx.lineWidth=1; gameCtx.stroke();
                 }
-                
                 let sGrad = gameCtx.createRadialGradient(0,0,0, 0,0,bird.radius+18);
                 sGrad.addColorStop(0, 'rgba(56,189,248,0.1)'); sGrad.addColorStop(1, 'rgba(56,189,248,0.4)');
                 gameCtx.fillStyle = sGrad; gameCtx.fill();
@@ -752,7 +775,6 @@
 
             gameCtx.restore();
 
-            // Draw Popups
             popups.forEach(p => {
                 gameCtx.fillStyle = p.color; gameCtx.globalAlpha = Math.max(0, p.life);
                 gameCtx.font = '900 22px "Segoe UI", sans-serif'; gameCtx.textAlign = 'center';
@@ -763,31 +785,20 @@
 
             applyCameraEffects();
 
-            // Draw Countdown Overlay
             if (gameState === 'COUNTDOWN') {
-                gameCtx.fillStyle = 'rgba(2, 6, 23, 0.6)';
-                gameCtx.fillRect(0,0, gameCanvas.width, gameCanvas.height);
-                
+                gameCtx.fillStyle = 'rgba(2, 6, 23, 0.6)'; gameCtx.fillRect(0,0, gameCanvas.width, gameCanvas.height);
                 let text = countdownValue > 0 ? countdownValue : "GO!";
                 let cColor = countdownValue > 0 ? '#38bdf8' : '#4ade80';
                 
-                gameCtx.fillStyle = cColor;
-                gameCtx.shadowColor = cColor;
-                gameCtx.shadowBlur = 30;
-                gameCtx.font = '900 140px "Segoe UI", sans-serif';
-                gameCtx.textAlign = 'center';
+                gameCtx.fillStyle = cColor; gameCtx.shadowColor = cColor; gameCtx.shadowBlur = 30;
+                gameCtx.font = '900 140px "Segoe UI", sans-serif'; gameCtx.textAlign = 'center';
                 
                 let scale = 1 + (countdownTimer / 60) * 0.3; 
-                gameCtx.save();
-                gameCtx.translate(gameCanvas.width/2, gameCanvas.height/2 + 40);
-                gameCtx.scale(scale, scale);
-                gameCtx.fillText(text, 0, 0);
-                gameCtx.restore();
-                
+                gameCtx.save(); gameCtx.translate(gameCanvas.width/2, gameCanvas.height/2 + 40); gameCtx.scale(scale, scale);
+                gameCtx.fillText(text, 0, 0); gameCtx.restore();
                 gameCtx.shadowBlur = 0;
             }
 
-            // Face Warning UI
             if ((gameState === 'PLAYING' || gameState === 'COUNTDOWN') && !faceDetected) {
                 gameCtx.fillStyle = 'rgba(2, 6, 23, 0.8)'; gameCtx.fillRect(0,0, gameCanvas.width, gameCanvas.height);
                 gameCtx.shadowColor = '#ef4444'; gameCtx.shadowBlur = 20; gameCtx.fillStyle = '#ef4444';
@@ -801,12 +812,11 @@
         function gameLoop() {
             update();
             draw();
-            if (gameState !== 'IDLE') {
+            if (gameState !== 'IDLE' && gameState !== 'MENU') {
                 requestAnimationFrame(gameLoop);
             }
         }
 
-        // Draw initial idle screen
         initScenery();
         draw();
 
@@ -1944,7 +1954,7 @@ function drawHero() {
   requestAnimationFrame(drawHero);
 }
 drawHero();
-</script>
+<\/script>
 </body>
 </html>
     </script>
